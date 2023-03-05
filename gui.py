@@ -42,7 +42,8 @@ class App(tk.Frame):
         self.action_frame = tk.Frame(self.master)
         self.action_frame.grid(row=3, column=0, sticky="nsew", columnspan=2)
 
-        self.action_label = tk.Label(self.action_frame, text="")
+        self.action_label = tk.Label(self.action_frame,
+                                     text="Normal Mode. The process affinity setting has been turned off.")
         self.action_label.pack(side="left", expand=True, fill="both")
 
         self.master.grid_rowconfigure(1, weight=1)
