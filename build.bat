@@ -1,0 +1,1 @@
+pyinstaller --onefile --noconsole gui.py --name "SaturnAffinity"

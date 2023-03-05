@@ -1,0 +1,6 @@
+dist/*
+build/*
+venv/*
+.idea/*
+game_list.txt
+*.spec
