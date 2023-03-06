@@ -1,12 +1,12 @@
 # Saturn Affinity
 
-CPU load balancing program for Ryzen CPUs with multiple CCDs.
+Program to optimize cache utilization for games on Ryzen CPUs with multiple L3 cache clusters.
 
-The goal is to minimize the impact on game performance while background programs are running.
+The purpose of this program is to optimize the speed of cache-sensitive games, even when background programs are running.
 
 ## How it works
-1. If a program in the Game List is in the foreground, assign it to CCD 0 and all other programs to CCD 1.
-2. Otherwise, reassign all programs so that they have access to both CCDs 0 and 1.
+1. If a program in the Game List is in the foreground, it is assigned to the cores with access to the largest L3 cache, and all other programs are assigned to the remaining cores.
+2. Otherwise, reassign them so that all programs have access to all cores.
 
 ## What are the effects of this program?
 ![AMD Ryzen 5000 Series Diagram](./docs/zen3.jpg)
@@ -16,30 +16,25 @@ This program allocates the game being played to CCD0 and all other programs to C
 
 CPUs with more L3 cache capacity for CCD0, such as the Ryzen 9 7950X3D and Ryzen 9 7900X3D, will see a greater effect, but in my testing, for cache-sensitive games, the Ryzen 9 5950X also saw a significant effect.
 
+Older generation Ryzen CPUs (such as the Ryzen 7 2700X), which have two CCXs on a single CCD and cannot benefit from caches from different CCXs, are expected to see a similar effect.
+
+For games that are highly cache-sensitive but weak on multithreading, CPUs with two CCDs and each CCD has two CCXs (such as the Ryzen 9 3950X) may also see performance gains, but many games are expected to experience performance drops due to the quartering of the number of cores allocated.
+
 ## Are there any games that shouldn't use this program?
 For games that spawn threads based on the number of cores in your CPU, it's possible that performance will suffer. This tool should not be used in such games.
+
+Even if this is not the case, games that can utilize a large number of threads may experience a performance drop on CPUs with fewer cores.
 
 ## Caution
 I created this program for the 7950X3D, but have not tested it on a real 7950X3D. Therefore, I cannot guarantee its behavior on the 7950X3D.
 
 For example, the Core Affinity feature in the Ryzen chipset driver may conflict with a feature in this program.
 
-In theory, it should also work on a Ryzen 7900X3D, but I have no plans to test its behavior in that environment.
-
 ## Compatibility
-Theoretically works on Zen 3 and later architectures with multiple CCDs.
-
-Therefore, CPUs not listed below will not be able to benefit from this tool.
+Theoretically, this program should work on CPUs with multiple L3 cache clusters. It is assumed that the larger the L3 cache cluster, the better the effect.
 
 ### Tested CPU
-- Ryzen 9 5950X
-
-### CPUs that should theoretically work
-- Ryzen 9 5900X
-- Ryzen 9 7900X
-- Ryzen 9 7950X
-- Ryzen 9 7900X3D
-- Ryzen 9 7950X3D
+- Ryzen 9 5950X (The game exclusively utilizes 8 cores and 32MB of L3 cache)
 
 ## Benchmark
 

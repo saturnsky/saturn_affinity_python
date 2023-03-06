@@ -42,13 +42,16 @@ class App(tk.Frame):
         self.action_frame = tk.Frame(self.master)
         self.action_frame.grid(row=3, column=0, sticky="nsew", columnspan=2)
 
-        self.action_label = tk.Label(self.action_frame,
-                                     text="Normal Mode. The process affinity setting has been turned off.")
+        self.action_label_disable_text = "Normal Mode. The process affinity setting has been turned off."
+        self.action_label_error_text = "Error. This program does not work on CPUs with only one L3 cache cluster."
+
+        self.action_label = tk.Label(self.action_frame, text=self.action_label_disable_text)
         self.action_label.pack(side="left", expand=True, fill="both")
 
         self.master.grid_rowconfigure(1, weight=1)
         self.master.grid_columnconfigure(0, weight=1)
         self.master.grid_columnconfigure(1, weight=1)
+        self.master.grid_rowconfigure(3, minsize=40)
         self.current_windows = []
         self.game_list = []
         self.game_set = set()
@@ -57,7 +60,10 @@ class App(tk.Frame):
 
         self.processes_update()
         self.load_game_list()
-        self.periodic_update()
+        if sal.check_error_cpu():
+            self.action_label.config(text=self.action_label_error_text)
+        else:
+            self.periodic_update()
 
     def processes_update(self):
         self.current_windows = sal.get_all_windows()
@@ -84,6 +90,8 @@ class App(tk.Frame):
                 f.write("{}|{}\n".format(game[0], game[1]))
 
     def add_game_item(self):
+        if not self.process_listbox.curselection():
+            return
         selected_window = self.current_windows[self.process_listbox.curselection()[0]]
         self.game_listbox.insert(tk.END, "{} ({})".format(selected_window[2], selected_window[1].split('\\')[-1]))
         self.game_list.append((selected_window[1], selected_window[2]))
@@ -91,6 +99,8 @@ class App(tk.Frame):
         self.game_set.add(selected_window[1])
 
     def delete_game_item(self):
+        if not self.game_listbox.curselection():
+            return
         selected_game = self.game_listbox.curselection()[0]
         self.game_set.remove(self.game_list[selected_game][0])
         self.game_listbox.delete(selected_game)
@@ -99,13 +109,17 @@ class App(tk.Frame):
 
     def periodic_update(self):
         current_process = sal.get_current_process()
+
         if current_process is None:
             return
         if current_process[1] in self.game_set:
             if self.current_game != current_process[1] or time.time() - self.previous_update > 60 * 5:
                 if self.current_game != current_process[1]:
                     self.action_label.config(
-                        text="Game Mode. Enable the process affinity setting for {}.".format(current_process[2]))
+                        text="Number of exclusive threads: {} Exclusive L3 cache size: {}MB\n"
+                             "Enable the process affinity setting for {}.".format(sal.get_best_cluster_thread_count(),
+                                                                                  sal.get_best_cluster_cache_size('MB'),
+                                                                                  current_process[2]))
 
                 self.current_game = current_process[1]
                 sal.set_affinity_all_process(current_process[0])
@@ -114,7 +128,7 @@ class App(tk.Frame):
             if self.current_game:
                 self.current_game = None
                 sal.set_affinity_all_process()
-                self.action_label.config(text="Normal Mode. The process affinity setting has been turned off.")
+                self.action_label.config(text=self.action_label_disable_text)
         self.after(1000, self.periodic_update)
 
     def on_closing(self):

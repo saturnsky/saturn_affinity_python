@@ -5,10 +5,19 @@ import win32api
 import win32con
 import win32gui
 
+import cache_lib
+
 processed_process = None
 processed_time = 0
 game_only_mode = False
 game_set = set()
+
+l3_cache_clusters = []
+best_cluster_mask = 0
+otherwise_cluster_mask = 0
+all_cluster_mask = 0
+
+best_cluster_thread_count = 0
 
 
 def get_number_of_processors():
@@ -64,20 +73,61 @@ def set_affinity_all_process(target_pname=None):
             if handle:
                 if target_pname is not None:
                     if p_name == target_pname[1]:
-                        if win32process.GetProcessAffinityMask(handle)[0] != half_processors_mask:
-                            win32process.SetProcessAffinityMask(handle, half_processors_mask)
+                        if win32process.GetProcessAffinityMask(handle)[0] != best_cluster_mask:
+                            win32process.SetProcessAffinityMask(handle, best_cluster_mask)
                     else:
-                        if win32process.GetProcessAffinityMask(handle)[0] != otherwise_processors_mask:
-                            win32process.SetProcessAffinityMask(handle, otherwise_processors_mask)
+                        if win32process.GetProcessAffinityMask(handle)[0] != otherwise_cluster_mask:
+                            win32process.SetProcessAffinityMask(handle, otherwise_cluster_mask)
                 else:
-                    if win32process.GetProcessAffinityMask(handle)[0] != all_processors_mask:
-                        win32process.SetProcessAffinityMask(handle, all_processors_mask)
+                    if win32process.GetProcessAffinityMask(handle)[0] != all_cluster_mask:
+                        win32process.SetProcessAffinityMask(handle, all_cluster_mask)
             win32api.CloseHandle(handle)
         except Exception as e:
             continue
 
 
-number_of_processors = get_number_of_processors()
-all_processors_mask = 2 ** number_of_processors - 1
-half_processors_mask = 2 ** (number_of_processors // 2) - 1
-otherwise_processors_mask = all_processors_mask ^ half_processors_mask
+def get_l3_cache_clusters():
+    infos = cache_lib.GetLogicalProcessorInformation()
+    cache_clusters = []
+
+    for info in infos:
+        if info.Cache.Level == 3:
+            cache_clusters.append((info.ProcessorMask, info.Cache.Size))
+
+    cache_clusters = sorted(cache_clusters, key=lambda x: x[1], reverse=True)
+
+    return cache_clusters
+
+
+# count of core in best cluster
+def get_best_cluster_thread_count():
+    global best_cluster_thread_count
+    if not best_cluster_thread_count:
+        best_cluster_thread_count = bin(best_cluster_mask).count('1')
+    return best_cluster_thread_count
+
+
+def get_best_cluster_cache_size(size_unit='MB'):
+    if size_unit == 'MB':
+        return l3_cache_clusters[0][1] // 1048576
+    elif size_unit == 'KB':
+        return l3_cache_clusters[0][1] // 1024
+    else:
+        return l3_cache_clusters[0][1]
+
+
+# 에러가 있는 CPU인지 확인
+def check_error_cpu():
+    if all_cluster_mask == best_cluster_mask:
+        return True
+    else:
+        return False
+
+
+l3_cache_clusters = get_l3_cache_clusters()
+
+best_cluster_mask = l3_cache_clusters[0][0]
+for cluster in l3_cache_clusters:
+    all_cluster_mask |= cluster[0]
+
+otherwise_cluster_mask = all_cluster_mask - best_cluster_mask
