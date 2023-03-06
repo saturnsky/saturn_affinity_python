@@ -4,6 +4,9 @@ Program to optimize cache utilization for games on Ryzen CPUs with multiple L3 c
 
 The purpose of this program is to optimize the speed of cache-sensitive games, even when background programs are running.
 
+## Download
+* [Saturn Affinity Release Link](https://github.com/saturnsky/saturn_affinity_python/releases)
+
 ## How it works
 1. If a program in the Game List is in the foreground, it is assigned to the cores with access to the largest L3 cache, and all other programs are assigned to the remaining cores.
 2. Otherwise, reassign them so that all programs have access to all cores.
