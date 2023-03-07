@@ -93,6 +93,8 @@ class App(tk.Frame):
         if not self.process_listbox.curselection():
             return
         selected_window = self.current_windows[self.process_listbox.curselection()[0]]
+        if selected_window[1] in self.game_set:
+            return
         self.game_listbox.insert(tk.END, "{} ({})".format(selected_window[2], selected_window[1].split('\\')[-1]))
         self.game_list.append((selected_window[1], selected_window[2]))
         self.save_game_list()
