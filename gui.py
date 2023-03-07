@@ -113,6 +113,7 @@ class App(tk.Frame):
         current_process = sal.get_current_process()
 
         if current_process is None:
+            self.after(1000, self.periodic_update)
             return
         if current_process[1] in self.game_set:
             if self.current_game != current_process[1] or time.time() - self.previous_update > 60 * 5:

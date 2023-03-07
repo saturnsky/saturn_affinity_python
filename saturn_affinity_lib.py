@@ -44,7 +44,8 @@ def get_current_process():
             text = win32gui.GetWindowText(hwnd)
             return process[0], process[1], text
         except Exception as e:
-            return None
+            continue
+    return None
 
 
 def get_all_windows():
