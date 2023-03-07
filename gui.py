@@ -43,7 +43,7 @@ class App(tk.Frame):
         self.action_frame.grid(row=3, column=0, sticky="nsew", columnspan=2)
 
         self.action_label_disable_text = "Normal Mode. The process affinity setting has been turned off."
-        self.action_label_error_text = "Error. This program does not work on CPUs with only one L3 cache cluster."
+        self.action_label_error_text = "Error. This CPU is not supported"
 
         self.action_label = tk.Label(self.action_frame, text=self.action_label_disable_text)
         self.action_label.pack(side="left", expand=True, fill="both")
@@ -60,7 +60,7 @@ class App(tk.Frame):
 
         self.processes_update()
         self.load_game_list()
-        if sal.check_error_cpu():
+        if sal.get_cpu_support_type() is None:
             self.action_label.config(text=self.action_label_error_text)
         else:
             self.periodic_update()
@@ -118,11 +118,17 @@ class App(tk.Frame):
         if current_process[1] in self.game_set:
             if self.current_game != current_process[1] or time.time() - self.previous_update > 60 * 5:
                 if self.current_game != current_process[1]:
-                    self.action_label.config(
-                        text="Number of exclusive threads: {} Exclusive L3 cache size: {}MB\n"
-                             "Enable the process affinity setting for {}.".format(sal.get_best_cluster_thread_count(),
-                                                                                  sal.get_best_cluster_cache_size('MB'),
-                                                                                  current_process[2]))
+                    if sal.get_cpu_support_type() == "AMD":
+                        self.action_label.config(
+                            text="Number of exclusive threads: {} Exclusive L3 cache size: {}MB\n"
+                                 "Enable the process affinity setting for {}.".format(sal.get_best_cluster_thread_count(),
+                                                                                      sal.get_best_cluster_cache_size('MB'),
+                                                                                      current_process[2]))
+                    else:
+                        self.action_label.config(
+                            text="Number of exclusive threads: {} (P-cores Only)\n"
+                                 "Enable the process affinity setting for {}.".format(sal.get_best_cluster_thread_count(),
+                                                                                      current_process[2]))
 
                 self.current_game = current_process[1]
                 sal.set_affinity_all_process(current_process[0])

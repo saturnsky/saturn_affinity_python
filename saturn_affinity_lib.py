@@ -12,6 +12,7 @@ processed_time = 0
 game_only_mode = False
 game_set = set()
 
+cpu_support_type = None
 l3_cache_clusters = []
 best_cluster_mask = 0
 otherwise_cluster_mask = 0
@@ -87,17 +88,46 @@ def set_affinity_all_process(target_pname=None):
             continue
 
 
-def get_l3_cache_clusters():
+def get_processor_structure():
     infos = cache_lib.GetLogicalProcessorInformation()
     cache_clusters = []
 
+    smt_mask = 0
+    non_smt_mask = 0
+
     for info in infos:
-        if info.Cache.Level == 3:
-            cache_clusters.append((info.ProcessorMask, info.Cache.Size))
+        if info.Relationship == 2:  # RelationCache
+            if info.Cache.Level == 3:
+                cache_clusters.append((info.ProcessorMask, info.Cache.Size))
+        elif info.Relationship == 0:  # RelationProcessorCore
+            if bin(info.ProcessorMask).count('1') > 1:
+                smt_mask |= info.ProcessorMask
+            else:
+                non_smt_mask |= info.ProcessorMask
 
     cache_clusters = sorted(cache_clusters, key=lambda x: x[1], reverse=True)
 
-    return cache_clusters
+    support_type = None
+    all_cluster_mask_local = 0
+    best_cluster_mask_local = 0
+    otherwise_cluster_mask_local = 0
+
+    for cluster in cache_clusters:
+        all_cluster_mask_local |= cluster[0]
+
+    # Multi Cache Cluster CPU (Supported AMD CPU)
+    if len(cache_clusters) > 1:
+        support_type = 'AMD'
+        best_cluster_mask_local = cache_clusters[0][0]
+        otherwise_cluster_mask_local = all_cluster_mask_local - best_cluster_mask_local
+    elif smt_mask != all_cluster_mask:
+        support_type = 'Intel'
+        best_cluster_mask_local = smt_mask
+        otherwise_cluster_mask_local = non_smt_mask
+    else:
+        support_type = None
+
+    return cache_clusters, all_cluster_mask_local, best_cluster_mask_local, otherwise_cluster_mask_local, support_type
 
 
 # count of core in best cluster
@@ -117,18 +147,9 @@ def get_best_cluster_cache_size(size_unit='MB'):
         return l3_cache_clusters[0][1]
 
 
-# 에러가 있는 CPU인지 확인
-def check_error_cpu():
-    if all_cluster_mask == best_cluster_mask:
-        return True
-    else:
-        return False
+# Check supported CPU types
+def get_cpu_support_type():
+    return cpu_support_type
 
 
-l3_cache_clusters = get_l3_cache_clusters()
-
-best_cluster_mask = l3_cache_clusters[0][0]
-for cluster in l3_cache_clusters:
-    all_cluster_mask |= cluster[0]
-
-otherwise_cluster_mask = all_cluster_mask - best_cluster_mask
+l3_cache_clusters, all_cluster_mask, best_cluster_mask, otherwise_cluster_mask, cpu_support_type = get_processor_structure()
