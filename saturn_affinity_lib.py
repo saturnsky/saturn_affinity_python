@@ -74,9 +74,10 @@ def set_affinity_all_process(target_pname=None):
             p_name = win32process.GetModuleFileNameEx(handle, 0)
             if handle:
                 if target_pname is not None:
-                    if p_name == target_pname[1]:
+                    if p_name == target_pname:
                         if win32process.GetProcessAffinityMask(handle)[0] != best_cluster_mask:
                             win32process.SetProcessAffinityMask(handle, best_cluster_mask)
+                            print("Set affinity to best cluster for %s" % p_name)
                     else:
                         if win32process.GetProcessAffinityMask(handle)[0] != otherwise_cluster_mask:
                             win32process.SetProcessAffinityMask(handle, otherwise_cluster_mask)

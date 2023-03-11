@@ -134,7 +134,7 @@ class App(tk.Frame):
                                                                                       current_process[2]))
 
                 self.current_game = current_process[1]
-                sal.set_affinity_all_process(current_process[0])
+                sal.set_affinity_all_process(current_process[1])
                 self.previous_update = time.time()
         else:
             if self.current_game:
