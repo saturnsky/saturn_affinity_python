@@ -1,8 +1,9 @@
 import os
 import tkinter as tk
-from pystray import MenuItem as item
 import pystray
 import time
+import sys
+
 from PIL import Image
 
 import saturn_affinity_lib as sal
@@ -147,6 +148,11 @@ class App(tk.Frame):
         sal.set_affinity_all_process()
         self.icon.stop()
         self.master.destroy()
+
+    def resource_path(self, relative_path):
+        if hasattr(sys, "_MEIPASS"):
+            return os.path.join(sys._MEIPASS, relative_path)
+        return os.path.join(os.path.abspath("."), relative_path)
         
     def on_showing(self):
         self.icon.stop()
@@ -155,9 +161,8 @@ class App(tk.Frame):
 
     def hide_tray(self):
         self.master.withdraw()
-        # self.master.deiconify()
-        image = Image.open('Cornmanthe3rd-Plex-Other-python.ico')
-        tray_menu = (item('Show', self.on_showing), item('Quit', self.on_closing))
+        image = Image.open(self.resource_path("assets/icon.ico"))
+        tray_menu = (pystray.MenuItem('Show', self.on_showing), pystray.MenuItem('Quit', self.on_closing))
         self.icon = pystray.Icon(name="Saturn Affinity", icon=image, title="Saturn Affinity", menu=tray_menu)
         self.icon.run()
 
