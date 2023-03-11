@@ -1,6 +1,9 @@
 import os
 import tkinter as tk
+from pystray import MenuItem as item
+import pystray
 import time
+from PIL import Image
 
 import saturn_affinity_lib as sal
 
@@ -13,7 +16,7 @@ class App(tk.Frame):
         self.master.title("Saturn Affinity")
         self.master.geometry("640x720")
         self.master.resizable(True, True)
-        self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
+        self.master.protocol("WM_DELETE_WINDOW", self.hide_tray)
 
         self.processes_label = tk.Label(self.master, text="Processes")
         self.processes_label.grid(row=0, column=0)
@@ -142,7 +145,21 @@ class App(tk.Frame):
 
     def on_closing(self):
         sal.set_affinity_all_process()
+        self.icon.stop()
         self.master.destroy()
+        
+    def on_showing(self):
+        self.icon.stop()
+        self.processes_update()
+        self.master.after(0,self.master.deiconify)
+
+    def hide_tray(self):
+        self.master.withdraw()
+        # self.master.deiconify()
+        image = Image.open('Cornmanthe3rd-Plex-Other-python.ico')
+        tray_menu = (item('Show', self.on_showing), item('Quit', self.on_closing))
+        self.icon = pystray.Icon(name="Saturn Affinity", icon=image, title="Saturn Affinity", menu=tray_menu)
+        self.icon.run()
 
 
 app = App(master=tk.Tk())
