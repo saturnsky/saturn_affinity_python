@@ -43,10 +43,6 @@ For games that spawn threads based on the number of cores in your CPU, it's poss
 Even if this is not the case, games that can utilize a large number of threads may experience a performance drop on CPUs with fewer cores.
 
 ## Caution
-I created this program for the 7950X3D, but have not tested it on a real 7950X3D. Therefore, I cannot guarantee its behavior on the 7950X3D.
-
-For example, the Core Affinity feature in the Ryzen chipset driver may conflict with a feature in this program.
-
 Theoretically, this program extends the functionality to work on modern Intel CPUs, but it has not been tested in an actual Intel CPU environment. Therefore, I cannot guarantee its behavior in this case.
 
 ## Compatibility
@@ -56,13 +52,11 @@ The program can also be used on CPUs with both P and E cores. In this case, the 
 
 ### Tested CPU
 - Ryzen 9 5950X (The game exclusively utilizes 8 cores and 32MB of L3 cache)
+- Ryzen 9 7950X3D (The game exclusively utilizes 8 cores and 96MB of L3 cache)
 
 ## Benchmark
 
 ### Stellaris
-Ryzen 9 5950X, DDR4-3200 128GB, Windows 11 [10.0.22621.1344]
-
-This system is not a clean environment because the operating system has been installed for a very long time, and there are many background programs running, so the effect may be exaggerated compared to a typical PC.
 
 #### Benchmark Settings
 - Galaxy Size: Huge (1000)
@@ -72,7 +66,7 @@ This system is not a clean environment because the operating system has been ins
 - Fallen Empires: 4
 - Marauder Empires: 3
 
-#### Benchmark Methods
+#### Benchmark Methods 1
 1. Start the game with the above settings.
 2. Save the game.
 3. All tests started by loading the game above.
@@ -80,15 +74,38 @@ This system is not a clean environment because the operating system has been ins
 5. See how many in-game days pass for 5 minutes at fastest speed.
 6. Repeat steps 3 to 5 3 times.
 
-#### Before
-- 1st: 3112 days
-- 2nd: 3118 days
-- 3rd: 3113 days
+##### Benchmark System 1
+Ryzen 9 5950X, DDR4-3200 128GB, Windows 11 [10.0.22621.1344]
 
-#### After
-- 1st: 4696 days
-- 2nd: 4662 days
-- 3rd: 4695 days
+This system is not a clean environment because the operating system has been installed for a very long time, and there are many background programs running, so the effect may be exaggerated compared to a typical PC.
+ 
+- 3112 days/ 3118 days/ 3113 days -> 4696 days/ 4662 days/ 4695 days
 
-#### Result
 50.4% performance improvement.
+
+##### Benchmark System 2
+Ryzen 9 7950X3D, DDR5-4800 128GB, Windows 11 [10.0.22621.1344]
+
+This system is not a clean environment because the operating system has been installed for a very long time, and there are many background programs running, so the effect may be exaggerated compared to a typical PC.
+
+- 5568 days/ 5547 days/ 5526 days -> 6755 days/ 6708 days/ 6681 days
+
+21.1% performance improvement.
+
+#### Benchmark Methods 2
+1. Spend time until the year 2400.
+2. Save the game.
+3. All tests started by loading the game above.
+4. Use the human_ai console command.
+5. See how many in-game days pass for 5 minutes at fastest speed.
+6. Repeat steps 3 to 5 3 times.
+
+
+##### Benchmark System 2
+Ryzen 9 7950X3D, DDR5-4800 128GB, Windows 11 [10.0.22621.1344]
+
+This system is not a clean environment because the operating system has been installed for a very long time, and there are many background programs running, so the effect may be exaggerated compared to a typical PC.
+
+- 1474 days/ 1492 days/ 1461 days -> 1836 days/ 1861 days/ 1737 days
+
+22.7% performance improvement.
