@@ -1,9 +1,13 @@
 import os
-import tkinter as tk
-import pystray
-import time
 import sys
+import time
+import tkinter as tk
 
+import ctypes
+import pystray
+import win32api
+import win32event
+import winerror
 from PIL import Image
 
 import saturn_affinity_lib as sal
@@ -125,14 +129,16 @@ class App(tk.Frame):
                     if sal.get_cpu_support_type() == "AMD":
                         self.action_label.config(
                             text="Number of exclusive threads: {} Exclusive L3 cache size: {}MB\n"
-                                 "Enable the process affinity setting for {}.".format(sal.get_best_cluster_thread_count(),
-                                                                                      sal.get_best_cluster_cache_size('MB'),
-                                                                                      current_process[2]))
+                                 "Enable the process affinity setting for {}.".format(
+                                sal.get_best_cluster_thread_count(),
+                                sal.get_best_cluster_cache_size('MB'),
+                                current_process[2]))
                     else:
                         self.action_label.config(
                             text="Number of exclusive threads: {} (P-cores Only)\n"
-                                 "Enable the process affinity setting for {}.".format(sal.get_best_cluster_thread_count(),
-                                                                                      current_process[2]))
+                                 "Enable the process affinity setting for {}.".format(
+                                sal.get_best_cluster_thread_count(),
+                                current_process[2]))
 
                 self.current_game = current_process[1]
                 sal.set_affinity_all_process(current_process[1])
@@ -149,15 +155,16 @@ class App(tk.Frame):
         self.icon.stop()
         self.master.destroy()
 
-    def resource_path(self, relative_path):
+    @staticmethod
+    def resource_path(relative_path):
         if hasattr(sys, "_MEIPASS"):
             return os.path.join(sys._MEIPASS, relative_path)
         return os.path.join(os.path.abspath("."), relative_path)
-        
+
     def on_showing(self):
         self.icon.stop()
         self.processes_update()
-        self.master.after(0,self.master.deiconify)
+        self.master.after(0, self.master.deiconify)
 
     def hide_tray(self):
         self.master.withdraw()
@@ -165,6 +172,14 @@ class App(tk.Frame):
         tray_menu = (pystray.MenuItem('Show', self.on_showing), pystray.MenuItem('Quit', self.on_closing))
         self.icon = pystray.Icon(name="Saturn Affinity", icon=image, title="Saturn Affinity", menu=tray_menu)
         self.icon.run()
+
+
+mutex = win32event.CreateMutex(None, 1, "SaturnAffinity")
+last_error = win32api.GetLastError()
+if last_error == winerror.ERROR_ALREADY_EXISTS:
+    mutex = None
+    ctypes.windll.user32.MessageBoxW(0, "Saturn Affinity is already running.", "Saturn Affinity", 0)
+    sys.exit(0)
 
 
 app = App(master=tk.Tk())
