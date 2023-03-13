@@ -1,4 +1,4 @@
-pyinstaller==5.8.0
+pyinstaller==5.7.0
 pywin32==305
 pywin32-ctypes==0.2.0
 pystray==0.19.4
