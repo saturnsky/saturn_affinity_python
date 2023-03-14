@@ -14,9 +14,17 @@ import saturn_affinity_lib as sal
 
 
 class App(tk.Frame):
+    def tray_setup(self):
+        image = Image.open(self.resource_path("assets/icon.ico"))
+        tray_menu = (pystray.MenuItem('Show', self.on_showing), pystray.MenuItem('Quit', self.on_closing))
+        self.icon = pystray.Icon(name="Saturn Affinity", icon=image, title="Saturn Affinity", menu=tray_menu)
+        self.icon.run_detached()
+
     def __init__(self, master=None):
         super().__init__(master)
         self.master = master
+
+        self.tray_setup()
 
         self.master.title("Saturn Affinity")
         self.master.geometry("640x720")
@@ -153,7 +161,7 @@ class App(tk.Frame):
     def on_closing(self):
         sal.set_affinity_all_process()
         self.icon.stop()
-        self.master.destroy()
+        app.quit()
 
     @staticmethod
     def resource_path(relative_path):
@@ -162,16 +170,11 @@ class App(tk.Frame):
         return os.path.join(os.path.abspath("."), relative_path)
 
     def on_showing(self):
-        self.icon.stop()
         self.processes_update()
         self.master.after(0, self.master.deiconify)
 
     def hide_tray(self):
         self.master.withdraw()
-        image = Image.open(self.resource_path("assets/icon.ico"))
-        tray_menu = (pystray.MenuItem('Show', self.on_showing), pystray.MenuItem('Quit', self.on_closing))
-        self.icon = pystray.Icon(name="Saturn Affinity", icon=image, title="Saturn Affinity", menu=tray_menu)
-        self.icon.run()
 
 
 mutex = win32event.CreateMutex(None, 1, "SaturnAffinity")
@@ -180,7 +183,6 @@ if last_error == winerror.ERROR_ALREADY_EXISTS:
     mutex = None
     ctypes.windll.user32.MessageBoxW(0, "Saturn Affinity is already running.", "Saturn Affinity", 0)
     sys.exit(0)
-
 
 app = App(master=tk.Tk())
 app.mainloop()
