@@ -17,14 +17,20 @@ import saturn_affinity_lib as sal
 
 class App(tk.Frame):
     def tray_setup(self):
-        image = Image.open(self.resource_path("assets/icon.ico"))
         tray_menu = (pystray.MenuItem('Show', self.on_showing), pystray.MenuItem('Quit', self.on_closing))
-        self.icon = pystray.Icon(name="Saturn Affinity", icon=image, title="Saturn Affinity", menu=tray_menu)
+        self.icon = pystray.Icon(name="Saturn Affinity", icon=self.default_icon, title="Saturn Affinity",
+                                 menu=tray_menu)
         self.icon.run_detached()
 
     def __init__(self, master=None):
         super().__init__(master)
         self.master = master
+
+        self.default_icon = Image.open(self.resource_path("assets/default.ico"))
+        self.active_icon = Image.open(self.resource_path("assets/active.ico"))
+        self.icon = None
+
+        self.master.iconbitmap(self.resource_path("assets/default.ico"))
 
         self.tray_setup()
 
@@ -108,14 +114,15 @@ class App(tk.Frame):
                 raw_data = f.read().splitlines()
                 if not len(raw_data):
                     return
-                if '|' in raw_data[0]: # legacy support
+                if '|' in raw_data[0]:  # legacy support
                     self.load_legacy_game_list(raw_data)
                     return
                 # The first line contains the version information for the save file.
                 for line in raw_data[1:]:
                     game_info = json.loads(line)
                     self.game_list.append(game_info)
-                    self.game_listbox.insert(tk.END, "{} ({})".format(game_info["name"], game_info["path"].split('\\')[-1]))
+                    self.game_listbox.insert(tk.END,
+                                             "{} ({})".format(game_info["name"], game_info["path"].split('\\')[-1]))
                     self.game_set.add(game_info["path"])
                 return
 
@@ -145,6 +152,36 @@ class App(tk.Frame):
         del self.game_list[selected_game]
         self.save_game_list()
 
+    def active_action(self, current_process):
+        if self.current_game != current_process[1]:
+            if sal.get_cpu_support_type() == "AMD":
+                self.action_label.config(
+                    text="Number of exclusive threads: {} Exclusive L3 cache size: {}MB\n"
+                         "Enable the process affinity setting for {}.".format(
+                        sal.get_best_cluster_thread_count(),
+                        sal.get_best_cluster_cache_size('MB'),
+                        current_process[2]))
+            else:
+                self.action_label.config(
+                    text="Number of exclusive threads: {} (P-cores Only)\n"
+                         "Enable the process affinity setting for {}.".format(
+                        sal.get_best_cluster_thread_count(),
+                        current_process[2]))
+            self.icon.icon = self.active_icon
+            self.master.iconbitmap(self.resource_path("assets/active.ico"))
+
+        self.current_game = current_process[1]
+        sal.set_affinity_all_process(current_process[1])
+
+        self.previous_update = time.time()
+
+    def inactive_action(self):
+        self.icon.icon = self.default_icon
+        self.master.iconbitmap(self.resource_path("assets/default.ico"))
+        self.current_game = None
+        sal.set_affinity_all_process()
+        self.action_label.config(text=self.action_label_disable_text)
+
     def periodic_update(self):
         current_process = sal.get_current_process()
 
@@ -153,29 +190,11 @@ class App(tk.Frame):
             return
         if current_process[1] in self.game_set:
             if self.current_game != current_process[1] or time.time() - self.previous_update > 60 * 5:
-                if self.current_game != current_process[1]:
-                    if sal.get_cpu_support_type() == "AMD":
-                        self.action_label.config(
-                            text="Number of exclusive threads: {} Exclusive L3 cache size: {}MB\n"
-                                 "Enable the process affinity setting for {}.".format(
-                                sal.get_best_cluster_thread_count(),
-                                sal.get_best_cluster_cache_size('MB'),
-                                current_process[2]))
-                    else:
-                        self.action_label.config(
-                            text="Number of exclusive threads: {} (P-cores Only)\n"
-                                 "Enable the process affinity setting for {}.".format(
-                                sal.get_best_cluster_thread_count(),
-                                current_process[2]))
-
-                self.current_game = current_process[1]
-                sal.set_affinity_all_process(current_process[1])
-                self.previous_update = time.time()
+                self.active_action(current_process)
         else:
             if self.current_game:
-                self.current_game = None
-                sal.set_affinity_all_process()
-                self.action_label.config(text=self.action_label_disable_text)
+                self.inactive_action()
+
         self.after(1000, self.periodic_update)
 
     def on_closing(self):
