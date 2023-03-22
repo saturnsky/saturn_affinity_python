@@ -17,9 +17,16 @@ import saturn_affinity_lib as sal
 
 class App(tk.Frame):
     def tray_setup(self):
-        tray_menu = (pystray.MenuItem('Show', self.on_showing), pystray.MenuItem('Quit', self.on_closing))
-        self.icon = pystray.Icon(name="Saturn Affinity", icon=self.default_icon, title="Saturn Affinity",
-                                 menu=tray_menu)
+        tray_menu = (
+            pystray.MenuItem("Show", self.on_showing),
+            pystray.MenuItem("Quit", self.on_closing),
+        )
+        self.icon = pystray.Icon(
+            name="Saturn Affinity",
+            icon=self.default_icon,
+            title="Saturn Affinity",
+            menu=tray_menu,
+        )
         self.icon.run_detached()
 
     def __init__(self, master=None):
@@ -54,22 +61,30 @@ class App(tk.Frame):
         self.btn_frame = tk.Frame(self.master)
         self.btn_frame.grid(row=2, column=0, sticky="nsew", columnspan=2)
 
-        self.refresh_btn = tk.Button(self.btn_frame, text="Refresh", command=self.processes_update)
+        self.refresh_btn = tk.Button(
+            self.btn_frame, text="Refresh", command=self.processes_update
+        )
         self.refresh_btn.pack(side="left", expand=True, fill="x")
 
         self.add_btn = tk.Button(self.btn_frame, text="Add", command=self.add_game_item)
         self.add_btn.pack(side="left", expand=True, fill="x")
 
-        self.delete_btn = tk.Button(self.btn_frame, text="Delete", command=self.delete_game_item)
+        self.delete_btn = tk.Button(
+            self.btn_frame, text="Delete", command=self.delete_game_item
+        )
         self.delete_btn.pack(side="right", expand=True, fill="x")
 
         self.action_frame = tk.Frame(self.master)
         self.action_frame.grid(row=3, column=0, sticky="nsew", columnspan=2)
 
-        self.action_label_disable_text = "Normal Mode. The process affinity setting has been turned off."
+        self.action_label_disable_text = (
+            "Normal Mode. The process affinity setting has been turned off."
+        )
         self.action_label_error_text = "Error. This CPU is not supported"
 
-        self.action_label = tk.Label(self.action_frame, text=self.action_label_disable_text)
+        self.action_label = tk.Label(
+            self.action_frame, text=self.action_label_disable_text
+        )
         self.action_label.pack(side="left", expand=True, fill="both")
 
         self.master.grid_rowconfigure(1, weight=1)
@@ -84,7 +99,7 @@ class App(tk.Frame):
 
         self.processes_update()
         self.load_game_list()
-        if sal.get_cpu_support_type() is None:
+        if sal.get_cpu_support_type() == "Normal":
             self.action_label.config(text=self.action_label_error_text)
         else:
             self.periodic_update()
@@ -93,16 +108,22 @@ class App(tk.Frame):
         self.current_windows = sal.get_all_windows()
         self.process_listbox.delete(0, tk.END)
         for idx, window in enumerate(self.current_windows):
-            self.process_listbox.insert(idx, "{} ({})".format(window[2], window[1].split('\\')[-1]))
+            self.process_listbox.insert(
+                idx, "{} ({})".format(window[2], window[1].split("\\")[-1])
+            )
 
     def load_legacy_game_list(self, raw_data):
         for line in raw_data:
-            program_path, program_name = line.split('|', 1)
-            self.game_list.append({
-                "name": program_name,
-                "path": program_path,
-            })
-            self.game_listbox.insert(tk.END, "{} ({})".format(program_name, program_path.split('\\')[-1]))
+            program_path, program_name = line.split("|", 1)
+            self.game_list.append(
+                {
+                    "name": program_name,
+                    "path": program_path,
+                }
+            )
+            self.game_listbox.insert(
+                tk.END, "{} ({})".format(program_name, program_path.split("\\")[-1])
+            )
             self.game_set.add(program_path)
 
     def load_game_list(self):
@@ -114,15 +135,19 @@ class App(tk.Frame):
                 raw_data = f.read().splitlines()
                 if not len(raw_data):
                     return
-                if '|' in raw_data[0]:  # legacy support
+                if "|" in raw_data[0]:  # legacy support
                     self.load_legacy_game_list(raw_data)
                     return
                 # The first line contains the version information for the save file.
                 for line in raw_data[1:]:
                     game_info = json.loads(line)
                     self.game_list.append(game_info)
-                    self.game_listbox.insert(tk.END,
-                                             "{} ({})".format(game_info["name"], game_info["path"].split('\\')[-1]))
+                    self.game_listbox.insert(
+                        tk.END,
+                        "{} ({})".format(
+                            game_info["name"], game_info["path"].split("\\")[-1]
+                        ),
+                    )
                     self.game_set.add(game_info["path"])
                 return
 
@@ -138,7 +163,10 @@ class App(tk.Frame):
         selected_window = self.current_windows[self.process_listbox.curselection()[0]]
         if selected_window[1] in self.game_set:
             return
-        self.game_listbox.insert(tk.END, "{} ({})".format(selected_window[2], selected_window[1].split('\\')[-1]))
+        self.game_listbox.insert(
+            tk.END,
+            "{} ({})".format(selected_window[2], selected_window[1].split("\\")[-1]),
+        )
         self.game_list.append({"name": selected_window[2], "path": selected_window[1]})
         self.save_game_list()
         self.game_set.add(selected_window[1])
@@ -154,24 +182,27 @@ class App(tk.Frame):
 
     def active_action(self, current_process):
         if self.current_game != current_process[1]:
-            if sal.get_cpu_support_type() == "AMD":
+            if sal.get_cpu_support_type() == "AMD_MultiCCX":
                 self.action_label.config(
                     text="Number of exclusive threads: {} Exclusive L3 cache size: {}MB\n"
-                         "Enable the process affinity setting for {}.".format(
-                        sal.get_best_cluster_thread_count(),
-                        sal.get_best_cluster_cache_size('MB'),
-                        current_process[2]))
-            else:
+                    "Enable the process affinity setting for {}.".format(
+                        sal.get_cluster_thread_count(0),
+                        sal.get_cluster_cache_size(0, "MB"),
+                        current_process[2],
+                    )
+                )
+            elif sal.get_cpu_support_type() == "Intel_BigLittle":
                 self.action_label.config(
                     text="Number of exclusive threads: {} (P-cores Only)\n"
-                         "Enable the process affinity setting for {}.".format(
-                        sal.get_best_cluster_thread_count(),
-                        current_process[2]))
+                    "Enable the process affinity setting for {}.".format(
+                        sal.get_cluster_thread_count(0), current_process[2]
+                    )
+                )
             self.icon.icon = self.active_icon
             self.master.iconbitmap(self.resource_path("assets/active.ico"))
 
         self.current_game = current_process[1]
-        sal.set_affinity_all_process(current_process[1])
+        sal.set_affinity_all_process(current_process[1], 1)
 
         self.previous_update = time.time()
 
@@ -189,7 +220,10 @@ class App(tk.Frame):
             self.after(1000, self.periodic_update)
             return
         if current_process[1] in self.game_set:
-            if self.current_game != current_process[1] or time.time() - self.previous_update > 60 * 5:
+            if (
+                self.current_game != current_process[1]
+                or time.time() - self.previous_update > 60 * 5
+            ):
                 self.active_action(current_process)
         else:
             if self.current_game:
@@ -220,7 +254,9 @@ mutex = win32event.CreateMutex(None, 1, "SaturnAffinity")
 last_error = win32api.GetLastError()
 if last_error == winerror.ERROR_ALREADY_EXISTS:
     mutex = None
-    ctypes.windll.user32.MessageBoxW(0, "Saturn Affinity is already running.", "Saturn Affinity", 0)
+    ctypes.windll.user32.MessageBoxW(
+        0, "Saturn Affinity is already running.", "Saturn Affinity", 0
+    )
     sys.exit(0)
 
 app = App(master=tk.Tk())

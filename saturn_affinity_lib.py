@@ -13,9 +13,7 @@ game_only_mode = False
 game_set = set()
 
 cpu_support_type = None
-l3_cache_clusters = []
-best_cluster_mask = 0
-otherwise_cluster_mask = 0
+core_clusters = []
 all_cluster_mask = 0
 
 best_cluster_thread_count = 0
@@ -66,7 +64,18 @@ def get_all_windows():
     return hwnds
 
 
-def set_affinity_all_process(target_pname=None):
+def set_affinity_all_process(
+    target_pname=None,
+    cluster_mask=0,
+):
+    affinity_cluster_mask = 0
+    for cluster_idx, cluster in enumerate(core_clusters):
+        if cluster_mask & (1 << cluster_idx):
+            affinity_cluster_mask += cluster["ClusterMask"]
+    otherwise_cluster_mask = all_cluster_mask - affinity_cluster_mask
+    # print("Best Cluster Mask: %s" % hex(best_cluster_mask))
+    # print("Otherwise Cluster Mask: %s" % hex(otherwise_cluster_mask))
+
     enum_processes = win32process.EnumProcesses()
     for pid in enum_processes:
         try:
@@ -75,14 +84,27 @@ def set_affinity_all_process(target_pname=None):
             if handle:
                 if target_pname is not None:
                     if p_name == target_pname:
-                        if win32process.GetProcessAffinityMask(handle)[0] != best_cluster_mask:
-                            win32process.SetProcessAffinityMask(handle, best_cluster_mask)
+                        if (
+                            win32process.GetProcessAffinityMask(handle)[0]
+                            != affinity_cluster_mask
+                        ):
+                            win32process.SetProcessAffinityMask(
+                                handle, affinity_cluster_mask
+                            )
                             print("Set affinity to best cluster for %s" % p_name)
                     else:
-                        if win32process.GetProcessAffinityMask(handle)[0] != otherwise_cluster_mask:
-                            win32process.SetProcessAffinityMask(handle, otherwise_cluster_mask)
+                        if (
+                            win32process.GetProcessAffinityMask(handle)[0]
+                            != otherwise_cluster_mask
+                        ):
+                            win32process.SetProcessAffinityMask(
+                                handle, otherwise_cluster_mask
+                            )
                 else:
-                    if win32process.GetProcessAffinityMask(handle)[0] != all_cluster_mask:
+                    if (
+                        win32process.GetProcessAffinityMask(handle)[0]
+                        != all_cluster_mask
+                    ):
                         win32process.SetProcessAffinityMask(handle, all_cluster_mask)
             win32api.CloseHandle(handle)
         except Exception as e:
@@ -101,51 +123,76 @@ def get_processor_structure():
             if info.Cache.Level == 3:
                 cache_clusters.append((info.ProcessorMask, info.Cache.Size))
         elif info.Relationship == 0:  # RelationProcessorCore
-            if bin(info.ProcessorMask).count('1') > 1:
+            if bin(info.ProcessorMask).count("1") > 1:
                 smt_mask |= info.ProcessorMask
             else:
                 non_smt_mask |= info.ProcessorMask
 
     cache_clusters = sorted(cache_clusters, key=lambda x: x[1], reverse=True)
 
-    support_type = None
     all_cluster_mask_local = 0
-    best_cluster_mask_local = 0
-    otherwise_cluster_mask_local = 0
+
+    core_clusters_local = []
 
     for cluster in cache_clusters:
         all_cluster_mask_local |= cluster[0]
 
     # Multi Cache Cluster CPU (Supported AMD CPU)
     if len(cache_clusters) > 1:
-        support_type = 'AMD'
-        best_cluster_mask_local = cache_clusters[0][0]
-        otherwise_cluster_mask_local = all_cluster_mask_local - best_cluster_mask_local
-    elif smt_mask != all_cluster_mask:
-        support_type = 'Intel'
-        best_cluster_mask_local = smt_mask
-        otherwise_cluster_mask_local = non_smt_mask
+        support_type = "AMD_MultiCCX"
+        for cluster in cache_clusters:
+            core_clusters_local.append(
+                {
+                    "ClusterMask": cluster[0],
+                    "ThreadCount": bin(cluster[0]).count("1"),
+                    "CacheSize": cluster[1],
+                }
+            )
+    elif smt_mask != all_cluster_mask_local:
+        support_type = "Intel_BigLittle"
+        core_clusters_local = [
+            {
+                "ClusterMask": smt_mask,
+                "ThreadCount": bin(smt_mask).count("1"),
+                "CacheSize": cache_clusters[0][1],
+            },
+            {
+                "ClusterMask": non_smt_mask,
+                "ThreadCount": bin(non_smt_mask).count("1"),
+                "CacheSize": cache_clusters[0][1],
+            },
+        ]
     else:
-        support_type = None
+        support_type = "Normal"
+        core_clusters_local = [
+            {
+                "ClusterMask": smt_mask,
+                "ThreadCount": bin(smt_mask).count("1"),
+                "CacheSize": cache_clusters[0][1],
+            },
+        ]
 
-    return cache_clusters, all_cluster_mask_local, best_cluster_mask_local, otherwise_cluster_mask_local, support_type
+    return core_clusters_local, all_cluster_mask_local, support_type
+
+
+def get_cluster_count():
+    return len(core_clusters)
 
 
 # count of core in best cluster
-def get_best_cluster_thread_count():
-    global best_cluster_thread_count
-    if not best_cluster_thread_count:
-        best_cluster_thread_count = bin(best_cluster_mask).count('1')
-    return best_cluster_thread_count
+def get_cluster_thread_count(cluster_index):
+    return core_clusters[cluster_index]["ThreadCount"]
 
 
-def get_best_cluster_cache_size(size_unit='MB'):
-    if size_unit == 'MB':
-        return l3_cache_clusters[0][1] // 1048576
-    elif size_unit == 'KB':
-        return l3_cache_clusters[0][1] // 1024
+def get_cluster_cache_size(cluster_index, size_unit="MB"):
+    cache_size = core_clusters[cluster_index]["CacheSize"]
+    print(cache_size, core_clusters)
+    if size_unit == "MB":
+        return cache_size // 1048576
+    elif size_unit == "KB":
+        return cache_size // 1024
     else:
-        return l3_cache_clusters[0][1]
+        return cache_size
 
 
 # Check supported CPU types
@@ -153,4 +200,4 @@ def get_cpu_support_type():
     return cpu_support_type
 
 
-l3_cache_clusters, all_cluster_mask, best_cluster_mask, otherwise_cluster_mask, cpu_support_type = get_processor_structure()
+core_clusters, all_cluster_mask, cpu_support_type = get_processor_structure()
