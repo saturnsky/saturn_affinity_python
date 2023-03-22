@@ -1,1 +1,1 @@
-pyinstaller --onefile --noconsole gui.py --name "SaturnAffinity" --add-data "assets/icon.ico;assets"
+pyinstaller --onefile --noconsole gui.py --icon "./assets/default.ico" --name "SaturnAffinity" --add-data "assets/*.ico;assets"
