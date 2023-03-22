@@ -18,6 +18,8 @@ all_cluster_mask = 0
 
 best_cluster_thread_count = 0
 
+priority_updated_p_name = None
+
 
 def get_number_of_processors():
     sysinfo = win32api.GetSystemInfo()
@@ -64,10 +66,10 @@ def get_all_windows():
     return hwnds
 
 
-def set_affinity_all_process(
-    target_pname=None,
-    cluster_mask=0,
+def update_process_affinity_and_priority(
+    target_pname=None, cluster_mask=0, priority_level=win32process.NORMAL_PRIORITY_CLASS
 ):
+    global priority_updated_p_name
     affinity_cluster_mask = 0
     for cluster_idx, cluster in enumerate(core_clusters):
         if cluster_mask & (1 << cluster_idx):
@@ -92,6 +94,12 @@ def set_affinity_all_process(
                                 handle, affinity_cluster_mask
                             )
                             print("Set affinity to best cluster for %s" % p_name)
+                        if win32process.GetPriorityClass(handle) != priority_level:
+                            win32process.SetPriorityClass(handle, priority_level)
+                            print(
+                                "Set priority to %s for %s" % (priority_level, p_name)
+                            )
+                            priority_updated_p_name = p_name
                     else:
                         if (
                             win32process.GetProcessAffinityMask(handle)[0]
@@ -106,6 +114,10 @@ def set_affinity_all_process(
                         != all_cluster_mask
                     ):
                         win32process.SetProcessAffinityMask(handle, all_cluster_mask)
+                    if p_name == priority_updated_p_name:
+                        win32process.SetPriorityClass(
+                            handle, win32process.NORMAL_PRIORITY_CLASS
+                        )
             win32api.CloseHandle(handle)
         except Exception as e:
             continue

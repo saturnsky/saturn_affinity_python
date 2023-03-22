@@ -202,7 +202,7 @@ class App(tk.Frame):
             self.master.iconbitmap(self.resource_path("assets/active.ico"))
 
         self.current_game = current_process[1]
-        sal.set_affinity_all_process(current_process[1], 1)
+        sal.update_process_affinity_and_priority(current_process[1], 1)
 
         self.previous_update = time.time()
 
@@ -210,7 +210,7 @@ class App(tk.Frame):
         self.icon.icon = self.default_icon
         self.master.iconbitmap(self.resource_path("assets/default.ico"))
         self.current_game = None
-        sal.set_affinity_all_process()
+        sal.update_process_affinity_and_priority()
         self.action_label.config(text=self.action_label_disable_text)
 
     def periodic_update(self):
@@ -232,7 +232,7 @@ class App(tk.Frame):
         self.after(1000, self.periodic_update)
 
     def on_closing(self):
-        sal.set_affinity_all_process()
+        sal.update_process_affinity_and_priority()
         self.icon.stop()
         app.quit()
 
