@@ -99,13 +99,13 @@ class App(tk.Frame):
 
         self.processes_update()
         self.load_game_list()
-        if sal.get_cpu_support_type() == "Normal":
+        if sal.get_current_cpu_type() == "Normal":
             self.action_label.config(text=self.action_label_error_text)
         else:
             self.periodic_update()
 
     def processes_update(self):
-        self.current_windows = sal.get_all_windows()
+        self.current_windows = sal.get_windows_info()
         self.process_listbox.delete(0, tk.END)
         for idx, window in enumerate(self.current_windows):
             self.process_listbox.insert(
@@ -182,27 +182,27 @@ class App(tk.Frame):
 
     def active_action(self, current_process):
         if self.current_game != current_process[1]:
-            if sal.get_cpu_support_type() == "AMD_MultiCCX":
+            if sal.get_current_cpu_type() == "AMD_MultiCCX":
                 self.action_label.config(
                     text="Number of exclusive threads: {} Exclusive L3 cache size: {}MB\n"
                     "Enable the process affinity setting for {}.".format(
-                        sal.get_cluster_thread_count(0),
-                        sal.get_cluster_cache_size(0, "MB"),
+                        sal.get_thread_count_in_core_cluster(0),
+                        sal.get_cache_size_in_core_cluster(0, "MB"),
                         current_process[2],
                     )
                 )
-            elif sal.get_cpu_support_type() == "Intel_BigLittle":
+            elif sal.get_current_cpu_type() == "Intel_BigLittle":
                 self.action_label.config(
                     text="Number of exclusive threads: {} (P-cores Only)\n"
                     "Enable the process affinity setting for {}.".format(
-                        sal.get_cluster_thread_count(0), current_process[2]
+                        sal.get_thread_count_in_core_cluster(0), current_process[2]
                     )
                 )
             self.icon.icon = self.active_icon
             self.master.iconbitmap(self.resource_path("assets/active.ico"))
 
         self.current_game = current_process[1]
-        sal.update_process_affinity_and_priority(current_process[1], 1)
+        sal.set_process_affinity_and_priority(current_process[1], cluster_mask=1)
 
         self.previous_update = time.time()
 
@@ -210,11 +210,11 @@ class App(tk.Frame):
         self.icon.icon = self.default_icon
         self.master.iconbitmap(self.resource_path("assets/default.ico"))
         self.current_game = None
-        sal.update_process_affinity_and_priority()
+        sal.set_process_affinity_and_priority()
         self.action_label.config(text=self.action_label_disable_text)
 
     def periodic_update(self):
-        current_process = sal.get_current_process()
+        current_process = sal.get_foreground_process_info()
 
         if current_process is None:
             self.after(1000, self.periodic_update)
@@ -232,7 +232,7 @@ class App(tk.Frame):
         self.after(1000, self.periodic_update)
 
     def on_closing(self):
-        sal.update_process_affinity_and_priority()
+        sal.set_process_affinity_and_priority()
         self.icon.stop()
         app.quit()
 

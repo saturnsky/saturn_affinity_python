@@ -9,10 +9,10 @@ import cache_lib
 
 processed_process = None
 processed_time = 0
-game_only_mode = False
-game_set = set()
+application_only_mode = False
+target_applications = set()
 
-cpu_support_type = None
+current_cpu_type = None
 core_clusters = []
 all_cluster_mask = 0
 
@@ -21,12 +21,12 @@ best_cluster_thread_count = 0
 priority_updated_p_name = None
 
 
-def get_number_of_processors():
+def get_processor_count():
     sysinfo = win32api.GetSystemInfo()
     return sysinfo[5]
 
 
-def get_pname_from_window_hwnd(hwnd):
+def get_process_info_from_window_handle(hwnd):
     try:
         pid = win32process.GetWindowThreadProcessId(hwnd)
         handle = win32api.OpenProcess(win32con.MAXIMUM_ALLOWED, win32con.FALSE, pid[1])
@@ -37,11 +37,11 @@ def get_pname_from_window_hwnd(hwnd):
         return None
 
 
-def get_current_process():
+def get_foreground_process_info():
     for retry in range(0, 3):
         try:
             hwnd = win32gui.GetForegroundWindow()
-            process = get_pname_from_window_hwnd(hwnd)
+            process = get_process_info_from_window_handle(hwnd)
             text = win32gui.GetWindowText(hwnd)
             return process[0], process[1], text
         except Exception as e:
@@ -49,11 +49,11 @@ def get_current_process():
     return None
 
 
-def get_all_windows():
+def get_windows_info(visible_only=True):
     def callback(hwnd, hwnds):
-        if win32gui.IsWindowVisible(hwnd):
+        if win32gui.IsWindowVisible(hwnd) or not visible_only:
             try:
-                process = get_pname_from_window_hwnd(hwnd)
+                process = get_process_info_from_window_handle(hwnd)
                 text = win32gui.GetWindowText(hwnd)
                 if text:
                     hwnds.append((process[0], process[1], win32gui.GetWindowText(hwnd)))
@@ -66,8 +66,11 @@ def get_all_windows():
     return hwnds
 
 
-def update_process_affinity_and_priority(
-    target_pname=None, cluster_mask=0, priority_level=win32process.NORMAL_PRIORITY_CLASS
+def set_process_affinity_and_priority(
+    target_pname=None,
+    *,
+    cluster_mask=0,
+    priority_level=win32process.NORMAL_PRIORITY_CLASS
 ):
     global priority_updated_p_name
     affinity_cluster_mask = 0
@@ -187,16 +190,16 @@ def get_processor_structure():
     return core_clusters_local, all_cluster_mask_local, support_type
 
 
-def get_cluster_count():
+def get_total_core_cluster_count():
     return len(core_clusters)
 
 
 # count of core in best cluster
-def get_cluster_thread_count(cluster_index):
+def get_thread_count_in_core_cluster(cluster_index):
     return core_clusters[cluster_index]["ThreadCount"]
 
 
-def get_cluster_cache_size(cluster_index, size_unit="MB"):
+def get_cache_size_in_core_cluster(cluster_index, size_unit="MB"):
     cache_size = core_clusters[cluster_index]["CacheSize"]
     print(cache_size, core_clusters)
     if size_unit == "MB":
@@ -208,8 +211,8 @@ def get_cluster_cache_size(cluster_index, size_unit="MB"):
 
 
 # Check supported CPU types
-def get_cpu_support_type():
-    return cpu_support_type
+def get_current_cpu_type():
+    return current_cpu_type
 
 
-core_clusters, all_cluster_mask, cpu_support_type = get_processor_structure()
+core_clusters, all_cluster_mask, current_cpu_type = get_processor_structure()
