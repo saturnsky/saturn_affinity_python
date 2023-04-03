@@ -72,6 +72,27 @@ def set_process_affinity_and_priority(
     cluster_mask=0,
     priority_level=win32process.NORMAL_PRIORITY_CLASS
 ):
+    """
+    Set process affinity mask and priority level for a specified target process or reset for all processes.
+
+    This function sets the process affinity mask and priority level for a specified target process and
+    sets the affinity mask of all other processes to the complement of the input cluster mask. If the target
+    process name is not specified, the function resets the affinity mask and priority level for all processes
+    to their original values.
+
+    Args:
+        target_pname (str, optional): The name of the target process. If None, the function will
+            reset the affinity mask and priority level for all processes. Default is None.
+        cluster_mask (int, optional): The bit mask for the cluster to which the target process
+            should be assigned. If cluster_mask is 0 or all clusters, it will not be assigned
+            to any specific cluster. Default is 0.
+        priority_level (int, optional): The priority level for the target process. Default is
+            win32process.NORMAL_PRIORITY_CLASS.
+
+    Example usage:
+        set_process_affinity_and_priority("target_process.exe", cluster_mask=0x3,
+        priority_level=win32process.HIGH_PRIORITY_CLASS)
+    """
     global priority_updated_p_name
     affinity_cluster_mask = 0
     for cluster_idx, cluster in enumerate(core_clusters):
@@ -80,6 +101,10 @@ def set_process_affinity_and_priority(
     otherwise_cluster_mask = all_cluster_mask - affinity_cluster_mask
     # print("Best Cluster Mask: %s" % hex(best_cluster_mask))
     # print("Otherwise Cluster Mask: %s" % hex(otherwise_cluster_mask))
+
+    if affinity_cluster_mask == 0 or otherwise_cluster_mask == 0:
+        affinity_cluster_mask = all_cluster_mask
+        otherwise_cluster_mask = all_cluster_mask
 
     enum_processes = win32process.EnumProcesses()
     for pid in enum_processes:
@@ -154,44 +179,52 @@ def get_processor_structure():
 
     # Multi Cache Cluster CPU (Supported AMD CPU)
     if len(cache_clusters) > 1:
-        support_type = "AMD_MultiCCX"
-        for cluster in cache_clusters:
+        cpu_type = "AMD_MultiCCX"
+        for idx, cluster in enumerate(cache_clusters):
             core_clusters_local.append(
                 {
+                    "Name": "CCX %d" % (idx + 1),
                     "ClusterMask": cluster[0],
                     "ThreadCount": bin(cluster[0]).count("1"),
                     "CacheSize": cluster[1],
                 }
             )
     elif smt_mask != all_cluster_mask_local:
-        support_type = "Intel_BigLittle"
+        cpu_type = "Intel_BigLittle"
         core_clusters_local = [
             {
+                "Name": "P-Cores",
                 "ClusterMask": smt_mask,
                 "ThreadCount": bin(smt_mask).count("1"),
                 "CacheSize": cache_clusters[0][1],
             },
             {
+                "Name": "E-Cores",
                 "ClusterMask": non_smt_mask,
                 "ThreadCount": bin(non_smt_mask).count("1"),
                 "CacheSize": cache_clusters[0][1],
             },
         ]
     else:
-        support_type = "Normal"
+        cpu_type = "Normal"
         core_clusters_local = [
             {
+                "Name": "All",
                 "ClusterMask": smt_mask,
                 "ThreadCount": bin(smt_mask).count("1"),
                 "CacheSize": cache_clusters[0][1],
             },
         ]
 
-    return core_clusters_local, all_cluster_mask_local, support_type
+    return core_clusters_local, all_cluster_mask_local, cpu_type
 
 
 def get_total_core_cluster_count():
     return len(core_clusters)
+
+
+def get_names_of_core_clusters():
+    return [cluster["Name"] for cluster in core_clusters]
 
 
 # count of core in best cluster
