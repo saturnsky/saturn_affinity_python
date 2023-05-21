@@ -4,3 +4,5 @@ venv/*
 .idea/*
 game_list.txt
 *.spec
+*.egg-info
+__pycache__

@@ -5,7 +5,7 @@ import win32api
 import win32con
 import win32gui
 
-import cache_lib
+from saturn_affinity import cache_lib
 
 processed_process = None
 processed_time = 0
