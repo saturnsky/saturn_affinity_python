@@ -402,7 +402,7 @@ class App(tk.Frame):
     def on_closing(self):
         sal.set_process_affinity_and_priority()
         self.icon.stop()
-        app.quit()
+        self.quit()
 
     @staticmethod
     def resource_path(relative_path):

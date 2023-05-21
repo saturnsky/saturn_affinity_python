@@ -12,37 +12,46 @@ ERROR_INSUFFICIENT_BUFFER = 122
 
 
 class CACHE_DESCRIPTOR(Structure):
-    _fields_ = (('Level', w.BYTE),
-                ('Associativity', w.BYTE),
-                ('LineSize', w.WORD),
-                ('Size', w.DWORD),
-                ('Type', c_int))
+    _fields_ = (
+        ("Level", w.BYTE),
+        ("Associativity", w.BYTE),
+        ("LineSize", w.WORD),
+        ("Size", w.DWORD),
+        ("Type", c_int),
+    )
 
 
 class ProcessorCore(Structure):
-    _fields_ = ('Flags', w.BYTE),
+    _fields_ = (("Flags", w.BYTE),)
 
 
 class NumaNode(Structure):
-    _fields_ = ('NodeNumber', w.DWORD),
+    _fields_ = (("NodeNumber", w.DWORD),)
 
 
 class DUMMYUNIONNAME(Union):
-    _fields_ = (('ProcessorCore', ProcessorCore),
-                ('NumaNode', NumaNode),
-                ('Cache', CACHE_DESCRIPTOR),
-                ('Reserved', ULONGLONG * 2))
+    _fields_ = (
+        ("ProcessorCore", ProcessorCore),
+        ("NumaNode", NumaNode),
+        ("Cache", CACHE_DESCRIPTOR),
+        ("Reserved", ULONGLONG * 2),
+    )
 
 
 class SYSTEM_LOGICAL_PROCESSOR_INFORMATION(Structure):
-    _anonymous_ = 'DUMMYUNIONNAME',
-    _fields_ = (('ProcessorMask', ULONG_PTR),
-                ('Relationship', c_int),
-                ('DUMMYUNIONNAME', DUMMYUNIONNAME))
+    _anonymous_ = ("DUMMYUNIONNAME",)
+    _fields_ = (
+        ("ProcessorMask", ULONG_PTR),
+        ("Relationship", c_int),
+        ("DUMMYUNIONNAME", DUMMYUNIONNAME),
+    )
 
 
-dll = WinDLL('kernel32', use_last_error=True)
-dll.GetLogicalProcessorInformation.argtypes = POINTER(SYSTEM_LOGICAL_PROCESSOR_INFORMATION), w.LPDWORD
+dll = WinDLL("kernel32", use_last_error=True)
+dll.GetLogicalProcessorInformation.argtypes = (
+    POINTER(SYSTEM_LOGICAL_PROCESSOR_INFORMATION),
+    w.LPDWORD,
+)
 dll.GetLogicalProcessorInformation.restype = w.BOOL
 
 
