@@ -13,7 +13,7 @@ from PIL import Image
 
 import json
 
-import saturn_affinity_lib as sal
+from saturn_affinity import saturn_affinity_lib as sal
 
 
 class App(tk.Frame):
@@ -418,14 +418,15 @@ class App(tk.Frame):
         self.master.withdraw()
 
 
-mutex = win32event.CreateMutex(None, 1, "SaturnAffinity")
-last_error = win32api.GetLastError()
-if last_error == winerror.ERROR_ALREADY_EXISTS:
-    mutex = None
-    ctypes.windll.user32.MessageBoxW(
-        0, "Saturn Affinity is already running.", "Saturn Affinity", 0
-    )
-    sys.exit(0)
+def main():
+    mutex = win32event.CreateMutex(None, 1, "SaturnAffinity")
+    last_error = win32api.GetLastError()
+    if last_error == winerror.ERROR_ALREADY_EXISTS:
+        mutex = None
+        ctypes.windll.user32.MessageBoxW(
+            0, "Saturn Affinity is already running.", "Saturn Affinity", 0
+        )
+        sys.exit(0)
 
-app = App(master=tk.Tk())
-app.mainloop()
+    app = App(master=tk.Tk())
+    app.mainloop()
